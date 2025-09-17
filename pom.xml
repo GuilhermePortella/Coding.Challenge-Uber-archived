@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>com.uber</groupId>
 	<artifactId>email-service</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>email-service</name>
 	<description>Coding Challenge Guidelines - Uber archived </description>
 	<url />
