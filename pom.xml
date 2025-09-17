@@ -80,9 +80,7 @@
                 <configuration>
                     <release>${java.version}</release>
                     <encoding>${project.build.sourceEncoding}</encoding>
-                    <compilerArgs>
-                        <arg>--enable-preview</arg>
-                    </compilerArgs>
+                    <fork>true</fork>
                 </configuration>
             </plugin>
 
@@ -158,6 +156,38 @@
                 </executions>
             </plugin>
 
+            <!-- Safety check: fail early if environment sets enable-preview while project targets Java 21 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>validate-preview-flags</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- property preview.bad will be true when java.version starts with 21 and MAVEN_OPTS contains enable-preview -->
+                                <condition property="preview.bad">
+                                    <and>
+                                        <matches pattern="^21(\..*)?$" string="${java.version}"/>
+                                        <contains string="${env.MAVEN_OPTS}" substring="--enable-preview"/>
+                                    </and>
+                                </condition>
+                                <fail if="preview.bad">
+                                    Found environment flag --enable-preview in MAVEN_OPTS while project targets Java ${java.version}.
+                                    \nThis combination causes "invalid source release ${java.version} with --enable-preview" during compilation.
+                                    \nRemove --enable-preview from MAVEN_OPTS or build with the preview profile (mvn -Ppreview ...) which sets java.version=22 and enables preview.
+                                </fail>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Optional: dependency analysis for CI -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -173,6 +203,34 @@
             <properties>
                 <skipTests>false</skipTests>
             </properties>
+        </profile>
+
+       <!-- Use this profile only if you want to compile with preview features.
+           It sets java.version to 22 and enables the preview compiler option.
+           Activate with: mvn -Ppreview clean package -->
+        <profile>
+            <id>preview</id>
+            <properties>
+                <java.version>22</java.version>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>${maven.compiler.plugin.version}</version>
+                        <configuration>
+                            <release>${java.version}</release>
+                            <encoding>${project.build.sourceEncoding}</encoding>
+                            <fork>true</fork>
+                            <compilerArgs>
+                                <arg>--enable-preview</arg>
+                                <arg>-Xlint:preview</arg>
+                            </compilerArgs>
+                    </configuration>
+                </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
